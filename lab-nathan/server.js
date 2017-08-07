@@ -7,6 +7,6 @@ const debug = require('debug')('basic-authorization-server:server');
 const app = express();
 dotenv.config();
 
-app.listen(PORT, function() {
-  debug(`Listening on port ${PORT}.`);
+app.listen(process.env.PORT, function() {
+  debug(`Listening on port ${process.env.PORT}.`);
 });

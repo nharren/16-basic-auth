@@ -4,8 +4,10 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "test-win": "SET DEBUG=basic-authorization-server* && mocha",
+    "test": "DEBUG='basic-authorization-server*' && mocha",
+    "start-win": "SET DEBUG=basic-authorization-server* && node server.js",
+    "start": "DEBUG='basic-authorization-server*' && node server.js"
   },
   "keywords": [],
   "author": "",
