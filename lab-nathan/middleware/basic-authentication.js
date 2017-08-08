@@ -39,6 +39,6 @@ let basicAuthentication = function(request, response, next) {
   }
 
   next();
-}
+};
 
 module.exports = basicAuthentication;
