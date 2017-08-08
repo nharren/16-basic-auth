@@ -22,7 +22,6 @@ basicAuthorizationRouter.post('/api/signup', jsonParser, function(request, respo
     .then(user => user.generateToken())
     .then(token => response.send(token))
     .catch(next);
-    
 });
 
 basicAuthorizationRouter.get('/api/signin', basicAuthentication, function(request, response, next) {
