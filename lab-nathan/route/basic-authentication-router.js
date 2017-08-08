@@ -1,17 +1,21 @@
 'use strict';
 
 const Router = require('express').Router;
-const jsonParser = require('bodyparser').json();
+const jsonParser = require('body-parser').json();
 const debug = require('debug')('basic-authentication-server:basic-authentication-router');
-
 const basicAuthentication = require('../middleware/basic-authentication.js');
-
-const basicAuthorizationRouter = new Router();
-
 const User = require('../model/user.js');
+const createError = require('http-errors');
 
-basicAuthorizationRouter.post('/api/signup', jsonParser, function(request, response, next) {
+const basicAuthenticationRouter = Router();
+
+basicAuthenticationRouter.post('/api/signup', jsonParser, function(request, response, next) {
   debug('POST: /api/signup');
+
+  if (Object.keys(request.body).length == 0) {
+    let error = createError(400, 'no request body provided');
+    return next(error);
+  }
 
   let password = request.body.password;
   delete request.body.password;
@@ -24,12 +28,20 @@ basicAuthorizationRouter.post('/api/signup', jsonParser, function(request, respo
     .catch(next);
 });
 
-basicAuthorizationRouter.get('/api/signin', basicAuthentication, function(request, response, next) {
+basicAuthenticationRouter.get('/api/signin', basicAuthentication, function(request, response, next) {
   debug('GET: /api/signin');
 
   User.findOne({ username: request.authorization.username })
-    .then(user => user.comparePasswordHash(request.authorization.password))
+    .then(user => {
+      if (!user) {
+        return Promise.reject(createError(404, 'user not authorized'));
+      }
+
+      return user.comparePasswordHash(request.authorization.password)
+    })
     .then(user => user.generateToken())
     .then(token => response.send(token))
     .catch(next);
 });
+
+module.exports = basicAuthenticationRouter;

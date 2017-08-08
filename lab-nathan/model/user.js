@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const createError = require('http-errors');
 const jwt = require('jsonwebtoken');
+const debug = require('debug')('basic-authentication-server:user');
 
 const Schema = mongoose.Schema;
 
@@ -18,23 +19,25 @@ const userSchema = Schema({
 userSchema.methods.generatePasswordHash = function(password) {
   debug('generatePasswordHash');
 
-  return bcrypt.hash(password, 10)
-    .then(passwordHash => {
-      this.password = passwordHash;
-      return Promise.resolve(this);
+  return new Promise((resolve, reject) => {
+    bcrypt.hash(password, 10, (error, hash) => {
+      if (error) return reject(error);
+      this.password = hash;
+      resolve(this);
     });
+  });
 }
 
 userSchema.methods.comparePasswordHash = function(password) {
   debug('comparePasswordHash');
 
-  return bcrypt.compare(password, this.password)
-    .then(valid => {
-      if (!valid) {
-        let error = createError.Unauthorized();
-        return Promise.reject(error);
-      }
+  return new Promise((resolve, reject) => {
+    bcrypt.compare(password, this.password, (error, valid) => {
+      if (error) return reject(error);
+      if (!valid) return reject(createError(401, 'invalid password'));
+      resolve(this);
     });
+  });
 }
 
 userSchema.methods.generateFindHash = function() {
@@ -42,11 +45,14 @@ userSchema.methods.generateFindHash = function() {
 
   return new Promise((resolve, reject) => {
     let tries = 0;
+    _generateFindHash.call(this);
 
     function _generateFindHash() {
       this.findHash = crypto.randomBytes(32).toString('hex');
       this.save()
-        .then(() => resolve(this.findHash))
+        .then(() => {
+          return resolve(this.findHash);
+        })
         .catch(error => {
           if (tries > 3) {
             return reject(error);
@@ -62,12 +68,11 @@ userSchema.methods.generateFindHash = function() {
 userSchema.methods.generateToken = function() {
   debug('generateToken');
 
-  return generateFindHash()
-    .then(findHash => {
-      let jwtString = jwt.sign({ token: findHash }, process.env.APP_SECRET);
-      resolve(jwtString);
-    })
+  return new Promise((resolve, reject) => {
+    this.generateFindHash()
+    .then(findHash => resolve(jwt.sign({ token: findHash }, process.env.APP_SECRET)))
     .catch(error => reject(error));
+  });
 }
 
 module.exports = mongoose.model('user', userSchema);
